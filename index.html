@@ -1,0 +1,145 @@
+<html>
+	<head>
+	<title>{{ title }}</title>
+	<meta name="txtweb-appkey" content="{{ appkey }}" />
+	{% if charts %}
+	<!--Load the AJAX API-->
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script type="text/javascript">
+
+      // Load the Visualization API and the piechart package.
+      google.load('visualization', '1.0', {'packages':['corechart']});
+
+      // Set a callback to run when the Google Visualization API is loaded.
+      google.setOnLoadCallback(draw);
+
+      // Callback that creates and populates a data table,
+      // instantiates the pie chart, passes in the data and
+      // draws it.
+      function drawChart(div,title,rows) {
+
+        // Create the data table.
+        var data = new google.visualization.DataTable();
+        data.addColumn('string', 'Answer');
+        data.addColumn('number', 'Count');
+		data.addRows(rows);
+        // Set chart options
+        var options = {'title':title,
+                       'width':400,
+                       'height':300};
+
+        // Instantiate and draw our chart, passing in some options.
+        var chart = new google.visualization.PieChart(document.getElementById(div));
+        chart.draw(data, options);
+      }
+      function draw() {
+   {% for chart in charts %}
+   var parm = {{ chart.data }};
+   drawChart("chart_div{{ loop.index }}","{{ chart.title }}", parm);
+   {% endfor %} 	  
+      }
+    </script>
+    {% endif %}
+    {% if dropbox %}
+	<script type="text/javascript">
+	function post_to_url(path, params, method) {
+	    method = method || "post"; 
+	    var form = document.createElement("form");
+	    form.setAttribute("method", method);
+	    form.setAttribute("action", path);
+	
+	    for(var key in params) {
+	        if(params.hasOwnProperty(key)) {
+	            var hiddenField = document.createElement("input");
+	            hiddenField.setAttribute("type", "hidden");
+	            hiddenField.setAttribute("name", key);
+	            hiddenField.setAttribute("value", params[key]);
+	
+	            form.appendChild(hiddenField);
+	         }
+	    }
+	
+	    document.body.appendChild(form);
+	    form.submit();
+	}
+	
+	function submit_form(form) {
+		var choice = [];
+		for(var ch in form["choice[]"]) {
+			if (form["choice[]"][ch].value) {
+				choice.push(form["choice[]"][ch].value);
+			}
+		}
+			
+		ans = form.event_name.value + ": " + form.password.value + " " + choice.join(",");
+		post_to_url("../event",{"txtweb-message":ans,"txtweb-password":form.password.value,"txtweb-mobile":"web"});
+	}
+	</script>	
+	{% endif %}
+	</head>
+	<body>
+		{% if body %}
+		    {% for line in body %}
+		    	{{ line }}</br>
+		    {% endfor %}
+	    {% endif %}
+		{% if form %}		
+			<form action="{{ form.action }}" method="post"> 
+			{{ form.text }}  <input type="text" name="{{ form.name }}" />
+		<input type="submit" value="Submit" />
+			</form>
+			{% endif %}
+		{% if dropbox %}
+			<form method="POST">
+			<input type="hidden" name="event_name" value="{{ dropbox.name }}">
+			<input type="hidden" name="password" value="{{ dropbox.password }}">
+			{% for question in dropbox.dropbox %}
+				</br></br>{{ question.title }}
+				{% if question.choices %}
+					<select name="choice[]">
+					{% for choice in question.choices %}
+						<option value="{{ choice }}">{{ choice }}</option>
+					{% endfor %}
+					</select>
+				{% else %}
+					<input type="text" name="choice[]">
+				{% endif %}
+			{% endfor %}
+			<input type="button" value="Submit" onClick="submit_form(this.form);">
+			</form>
+		{% endif %}
+		{% if hrefs %}
+			{% for href in hrefs %}
+        		<a href="{{ host }}?{{ href.parms|join('&') }}" class="txtweb-menu-for">{{ href.text }}</a></br>
+			{% endfor %}
+		{% endif %}
+		{% if charts %}
+			{% for chart in charts %}
+				{{ chart.title }}
+				<table border="1">
+					<tr>
+						<th>Choice</th>
+						<th>Respondents</th>
+						<th>Percentage</th>
+					</tr>
+					{% for row in chart %}
+						{% if loop.index >= 3 %}
+							{% for col in row %}
+								<tr>
+									<td>{{ col[0] }}</td>
+									<td>{{ col[1] }}</td>
+									<td>{{ (col[1]/chart.resp_count)|round(2, 'common') }}</td>
+								</tr>
+							{% endfor %}
+						{% endif %}		
+					{% endfor %}
+				</table> 
+			{% endfor %}
+		{% endif %}
+		{% if charts %}
+			{% for chart in charts %}
+				<div id="chart_div{{ loop.index }}"></div>
+			{% endfor %} 
+		{% endif %}
+	</body>
+</html>
